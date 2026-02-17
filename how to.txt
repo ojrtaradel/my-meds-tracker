@@ -1,0 +1,23 @@
+firebase logout
+
+firebase login
+gemini? No
+CLI? No
+visit URL allow Google Acct
+success! logged in
+
+firebase init hosting
+proceed? YES
+use existing project
+select: oscar-meds-2026
+public directory? build/web
+single page? YES
+autobuild? NO
+overwrite? NO
+
+firebase deploy
+
+flutter build web --release
+flutter deploy
+
+

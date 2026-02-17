@@ -1,0 +1,37 @@
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "oscar-meds-2026",
+          "appId": "1:716802995665:android:fa3aa2c77d98d94e20dcf0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "oscar-meds-2026",
+          "configurations": {
+            "android": "1:716802995665:android:fa3aa2c77d98d94e20dcf0",
+            "ios": "1:716802995665:ios:45d880f244727ef120dcf0",
+            "web": "1:716802995665:web:ab44e844045fe10720dcf0"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "716802995665",
+    "project_id": "oscar-meds-2026",
+    "storage_bucket": "oscar-meds-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:716802995665:android:fa3aa2c77d98d94e20dcf0",
+        "android_client_info": {
+          "package_name": "com.example.my_med_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfLEUseXVeyvNrDBWNlTx5aC-tJIfGexA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
