@@ -63,13 +63,14 @@ To run this project locally, you will need to recreate the configuration files:
    ```bash
    git clone [https://github.com/ojrtaradel/my-meds-tracker.git](https://github.com/ojrtaradel/my-meds-tracker.git)
 
-```
 
 2. **Setup Firebase Configuration:**
-Create a Firebase project and place your `firebase_options.dart` file inside the `lib/` directory.
+   Create a Firebase project and place your `firebase_options.dart` file inside the `lib/` directory.
+
+
 3. **Create the Secrets file:**
-Navigate to the `lib/` folder and create a file named `secrets.dart`. Add the following code:
-```dart
+   Navigate to the `lib/` folder and create a file named `secrets.dart`. Add the following code:
+``` dart
 // lib/secrets.dart
 const String kAdminPassword = "YOUR_CUSTOM_ADMIN_PASSWORD"; 
 const String kTesterPassword = "tester2026";
@@ -89,13 +90,19 @@ flutter run -d chrome
 
 | Dashboard (Traffic Light) | Snapshot Preview | Privacy Mode (Tester) |
 |:---:|:---:|:---:|
-| *(Add Screenshot Here)* | *(Add Screenshot Here)* | *(Add Screenshot Here)* |
+| *![b8ba2343-b507-4c69-b31a-3778cd26c567](https://github.com/user-attachments/assets/40198bc5-f4a1-4b98-89b8-1d2fbb916d79)* | *![5b1d35f5-82e8-4fca-bfbc-65dfc970d7b5](https://github.com/user-attachments/assets/dcf0610b-72f6-45f9-a660-b3ef53c5fc46)* | *![2bb73e31-2df8-448c-a210-7f99053a25ea](https://github.com/user-attachments/assets/c80b7701-280e-4302-af4d-437a2b7c8de5)* |
+
+
+---
 
 ## 👨‍💻 Developer
 
-**[Your Name]**
+**Oscar Taradel Jr**
+
 *BSIT Student @ Green Valley College Foundation Inc.*
+
 *Experienced in Technical Support & Production Management.*
+
 ---
 
 *Built with ❤️ using Flutter & Firebase.*
