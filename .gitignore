@@ -46,3 +46,4 @@ app.*.map.json
 
 # Exclude my private password file
 lib/secrets.dart
+lib/firebase_options.dart
