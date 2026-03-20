@@ -16,11 +16,11 @@ import 'dart:typed_data';
 import 'dart:html' as html; 
 
 // --- IMPORT SECRETS ---
-import 'secrets.dart'; // Loads passwords from the hidden file
+import 'secrets.dart'; 
 
 // --- GLOBAL APP CONFIGURATION ---
 class AppConfig {
-  static bool isPrivacyMode = false; // Toggles based on login
+  static bool isPrivacyMode = false; 
 }
 
 void main() async {
@@ -109,7 +109,6 @@ class RefillLog {
   };
 
   factory RefillLog.fromMap(Map<String, dynamic> map) {
-    // --- PRIVACY MODE (LOGS) ---
     String finalDispenser = map['dispenser'] ?? "";
     String finalSource = map['source'] ?? "";
 
@@ -139,6 +138,7 @@ class Medication {
   String? lastDispenser; 
   List<Ingredient> ingredients; 
   bool isCritical;
+  bool isArchived; // NEW FIELD
   List<RefillLog> history; 
 
   Medication({
@@ -152,6 +152,7 @@ class Medication {
     required this.lastDeductionDate,
     this.lastDispenser,
     this.isCritical = false,
+    this.isArchived = false, // DEFAULT
     List<RefillLog>? history,
   }) : this.history = history ?? [];
 
@@ -165,19 +166,18 @@ class Medication {
       'lastDeductionDate': lastDeductionDate.toIso8601String(),
       'lastDispenser': lastDispenser,
       'isCritical': isCritical ? 1 : 0,
+      'isArchived': isArchived ? 1 : 0, // NEW FIELD
       'ingredients': ingredients.map((x) => x.toMap()).toList(),
       'history': history.map((x) => x.toMap()).toList(),
     };
   }
 
   factory Medication.fromMap(Map<String, dynamic> map, String docId) {
-    // --- PRIVACY MODE (MEDICINES) ---
     String bName = map['brandName'] ?? 'Unknown';
     String src = map['source'] ?? 'DOH';
     
     if (AppConfig.isPrivacyMode) {
       String lower = bName.toLowerCase();
-      // Masking Logic
       if (lower.contains('duo') || lower.contains('rifam')) bName = "Antibiotic (Combined)";
       else if (lower.contains('teld') || lower.contains('dolute')) bName = "Antiviral (Maintenance)";
       else if (lower.contains('cotri')) bName = "Antibiotic (Prophylaxis)";
@@ -201,6 +201,7 @@ class Medication {
       lastDeductionDate: DateTime.tryParse(map['lastDeductionDate'] ?? "") ?? getManilaTime(),
       lastDispenser: map['lastDispenser'],
       isCritical: (map['isCritical'] ?? 0) == 1,
+      isArchived: (map['isArchived'] ?? 0) == 1, // NEW FIELD
       ingredients: List<Ingredient>.from(map['ingredients']?.map((x) => Ingredient.fromMap(x)) ?? []),
       history: List<RefillLog>.from(map['history']?.map((x) => RefillLog.fromMap(x)) ?? []),
     );
@@ -486,7 +487,6 @@ class _AuthCheckState extends State<AuthCheck> {
     final prefs = await SharedPreferences.getInstance();
     bool loggedIn = prefs.getBool('logged_in') ?? false;
     
-    // RESTORE THE PRIVACY MODE STATE
     if (loggedIn) {
       AppConfig.isPrivacyMode = prefs.getBool('privacy_mode') ?? false;
     }
@@ -515,13 +515,12 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isValid = false;
     bool isPrivacy = false;
 
-    // --- DUAL LOGIN LOGIC (USING SECRETS) ---
-    if (input == kAdminPassword) { // Uses secret constant
+    if (input == kAdminPassword) { 
       isValid = true;
-      isPrivacy = false; // ADMIN (Real Data)
-    } else if (input == kTesterPassword) { // Uses secret constant
+      isPrivacy = false; 
+    } else if (input == kTesterPassword) { 
       isValid = true;
-      isPrivacy = true; // TESTER (Hidden Data)
+      isPrivacy = true; 
     }
 
     if (isValid) {
@@ -553,7 +552,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 fit: BoxFit.contain,
               ),
               SizedBox(height: 20),
-              Text("My Meds Tracker", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text("Oscar's Meds", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               SizedBox(height: 20),
               TextField(
                 controller: _passController,
@@ -598,7 +597,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _runDailyDeduction() async {
-    // --- CRITICAL SAFETY: DO NOT RUN DEDUCTION IF TESTER ---
     if (AppConfig.isPrivacyMode) return; 
 
     final snapshot = await FirebaseFirestore.instance.collection('meds').get();
@@ -650,10 +648,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // --- SNAPSHOT GENERATOR ---
-  Future<void> _showSnapshotDialog(List<Medication> meds) async {
+  Future<void> _showSnapshotDialog(List<Medication> activeMeds) async {
     setState(() => _isGenerating = true);
     try {
-      double contentHeight = 100.0 + (meds.length * 40.0) + 50.0;
+      double contentHeight = 100.0 + (activeMeds.length * 40.0) + 50.0;
       
       final pdf = pw.Document();
       pdf.addPage(
@@ -667,12 +665,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 pw.Table(border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5), children: [
                   pw.TableRow(decoration: pw.BoxDecoration(color: PdfColors.grey200), children: [
                     _pdfCell("Medicine", bold: true, width: 4),
-                    _pdfCell(AppConfig.isPrivacyMode ? "Last Update" : "Refill Date", bold: true, width: 2), // HIDE "REFILL" IN HEADER
+                    _pdfCell(AppConfig.isPrivacyMode ? "Last Update" : "Refill Date", bold: true, width: 2),
                     _pdfCell("Stock", bold: true, align: pw.TextAlign.center, width: 1.5),
                   ]),
-                  ...meds.map((med) {
+                  ...activeMeds.map((med) {
                     String details = med.brandName;
-                    if (!AppConfig.isPrivacyMode) { // HIDE INGREDIENTS IN PRIVACY MODE
+                    if (!AppConfig.isPrivacyMode) { 
                        details += "\n" + med.ingredients.map((i) => "${i.name} ${i.mg}mg").join(", ");
                     }
                     return pw.TableRow(children: [
@@ -909,7 +907,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- DASHBOARD BUILD METHOD (FILTERING APPLIED HERE) ---
+  // --- NEW: ARCHIVED MEDS DIALOG ---
+  void _showArchivedDialog(List<Medication> archivedMeds) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text("Archived Medicines"),
+        content: Container(
+          width: double.maxFinite,
+          child: archivedMeds.isEmpty 
+            ? Text("No archived medicines.")
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: archivedMeds.length,
+                itemBuilder: (context, index) {
+                  final med = archivedMeds[index];
+                  return ListTile(
+                    title: Text(med.brandName, style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("Stock: ${med.currentStock} • ${med.source}"),
+                    trailing: TextButton(
+                      child: Text("Restore"),
+                      onPressed: AppConfig.isPrivacyMode ? null : () async {
+                        await FirebaseFirestore.instance.collection('meds').doc(med.id).update({'isArchived': 0});
+                        Navigator.pop(ctx); 
+                      },
+                    ),
+                  );
+                }
+              )
+        ),
+        actions: [
+          TextButton(child: Text("Close"), onPressed: () => Navigator.pop(ctx))
+        ],
+      )
+    );
+  }
+
+  // --- DASHBOARD BUILD METHOD ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -920,23 +954,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
           if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}", style: TextStyle(color: Colors.red)));
 
-          List<Medication> meds = snapshot.hasData ? snapshot.data!.docs.map((doc) => Medication.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList() : <Medication>[];
+          List<Medication> allMeds = snapshot.hasData ? snapshot.data!.docs.map((doc) => Medication.fromMap(doc.data() as Map<String, dynamic>, doc.id)).toList() : <Medication>[];
           
-          // --- STRICT PRIVACY FILTER: REMOVE SENSITIVE MEDS ENTIRELY ---
           if (AppConfig.isPrivacyMode) {
-            meds.removeWhere((m) {
+            allMeds.removeWhere((m) {
               String name = m.brandName.toLowerCase();
               return name.contains('teldy') || 
                      name.contains('duomax') || 
                      name.contains('cotrim') || 
                      name.contains('rifam') || 
                      name.contains('dolute') ||
-                     name.contains('antiviral') || // Catch-all if already renamed
+                     name.contains('antiviral') || 
                      name.contains('antibiotic');
             });
           }
 
-          meds.sort((a, b) {
+          // --- SPLIT ACTIVE AND ARCHIVED MEDS ---
+          List<Medication> activeMeds = allMeds.where((m) => !m.isArchived).toList();
+          List<Medication> archivedMeds = allMeds.where((m) => m.isArchived).toList();
+
+          activeMeds.sort((a, b) {
              bool aPriority = (a.brandName.toLowerCase().contains("teldy") || a.brandName.toLowerCase().contains("antiviral") || a.source.contains("DOH") || a.source.contains("Gov"));
              bool bPriority = (b.brandName.toLowerCase().contains("teldy") || b.brandName.toLowerCase().contains("antiviral") || b.source.contains("DOH") || b.source.contains("Gov"));
              if (aPriority && !bPriority) return -1;
@@ -945,9 +982,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
 
           String headerText = _customVisitLabel?.isNotEmpty == true ? _customVisitLabel! : 
-             (meds.isEmpty ? DateFormat('MMM dd, yyyy').format(getManilaTime()) : DateFormat('MMM dd, yyyy').format(meds.map((m) => m.nextRefillDate).reduce((a, b) => a.isBefore(b) ? a : b)));
+             (activeMeds.isEmpty ? DateFormat('MMM dd, yyyy').format(getManilaTime()) : DateFormat('MMM dd, yyyy').format(activeMeds.map((m) => m.nextRefillDate).reduce((a, b) => a.isBefore(b) ? a : b)));
 
-          Color headerColor = _getHeaderColor(meds);
+          Color headerColor = _getHeaderColor(activeMeds); // ONLY calculate color using active stock
 
           return Column(children: [
             SafeArea(bottom: false, child: Container(
@@ -956,7 +993,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text(AppConfig.isPrivacyMode ? "Medication Status (DEMO)" : "Medication Status", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  GestureDetector(onTap: _logout, child: Row(children: [Icon(Icons.logout, color: Colors.white.withOpacity(0.8), size: 16), SizedBox(width: 4), Text("Logout", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14))]))
+                  Row(
+                    children: [
+                      if (archivedMeds.isNotEmpty) // SHOW ARCHIVED BUTTON IF NEEDED
+                        GestureDetector(
+                          onTap: () => _showArchivedDialog(archivedMeds),
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 12.0),
+                            child: Icon(Icons.inventory_2, color: Colors.white.withOpacity(0.8), size: 20),
+                          )
+                        ),
+                      GestureDetector(onTap: _logout, child: Row(children: [Icon(Icons.logout, color: Colors.white.withOpacity(0.8), size: 16), SizedBox(width: 4), Text("Logout", style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14))]))
+                    ],
+                  )
                 ]),
                 SizedBox(height: 5), 
                 Text("Next Planned Visit", style: TextStyle(color: Colors.white70, fontSize: 12)),
@@ -964,12 +1013,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   children: [
                     InkWell(
-                      onTap: () => _showSpendHistory(meds),
+                      onTap: () => _showSpendHistory(allMeds), // Pass allMeds so archived history still shows!
                       child: Icon(Icons.calendar_month, color: Colors.white, size: 24),
                     ),
                     SizedBox(width: 15),
                     InkWell(
-                      onTap: () => _showSnapshotDialog(meds),
+                      onTap: () => _showSnapshotDialog(activeMeds), // Pass activeMeds to hide archived items from snapshot
                       child: _isGenerating ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Icon(Icons.camera_alt, color: Colors.white, size: 24),
                     ),
                     SizedBox(width: 10),
@@ -987,9 +1036,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ]),
             )),
-            Expanded(child: meds.isEmpty 
+            Expanded(child: activeMeds.isEmpty 
               ? Center(child: Text("Tap + to add medicines", style: TextStyle(color: Colors.grey)))
-              : ListView(padding: EdgeInsets.all(16), children: [...meds.map((med) => buildMedCard(med)).toList(), SizedBox(height: 80)])
+              : ListView(padding: EdgeInsets.all(16), children: [...activeMeds.map((med) => buildMedCard(med)).toList(), SizedBox(height: 80)])
             ),
           ]);
         }
@@ -1028,7 +1077,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (isDOH) Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.star, size: 18, color: Colors.orange))
             ]),
             
-            // --- HIDE INGREDIENTS SUBTITLE IN PRIVACY MODE ---
             if (!AppConfig.isPrivacyMode) ...[
               SizedBox(height: 4), ...med.ingredients.map((ing) => Text("${ing.name} ${ing.mg % 1 == 0 ? ing.mg.toInt() : ing.mg}mg", style: TextStyle(color: Colors.grey[800], height: 1.2))).toList(),
               if (med.ingredients.length > 1) 
@@ -1048,7 +1096,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Divider(),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Container(padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: med.isOOP ? Colors.red : Colors.teal, borderRadius: BorderRadius.circular(4)), child: Text("${med.source} (${med.cycleDuration}d)", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
-          // --- HIDE "REFILL" WORD IN PRIVACY MODE ---
           TextButton.icon(icon: Icon(Icons.edit, size: 16, color: textColor), label: Text(AppConfig.isPrivacyMode ? "Edit / Manage" : "Edit / Refill", style: TextStyle(color: textColor)), onPressed: () => _showEditDialog(med))
         ])
       ])),
@@ -1143,7 +1190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               
               Divider(height: 20),
               
-              if (!AppConfig.isPrivacyMode) ...[ // HIDE INGREDIENTS EDIT IN DEMO
+              if (!AppConfig.isPrivacyMode) ...[ 
                 Text("Generic Names / Ingredients:", style: TextStyle(fontWeight: FontWeight.bold)),
                 ...tempIngredients.asMap().entries.map((entry) {
                    int index = entry.key;
@@ -1176,7 +1223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white, minimumSize: Size(double.infinity, 45)),
-                child: Text(AppConfig.isPrivacyMode ? "Save Changes" : "Save Changes / Refill"), // CHANGED TEXT
+                child: Text(AppConfig.isPrivacyMode ? "Save Changes" : "Save Changes / Refill"),
                 onPressed: AppConfig.isPrivacyMode ? null : () async { 
                   int refillAmount = int.tryParse(refillCtrl.text) ?? 0;
                   int userCountToday = int.tryParse(stockCtrl.text) ?? med.currentStock;
@@ -1191,25 +1238,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   String? disp = dispenserCtrl.text.isNotEmpty ? dispenserCtrl.text : null;
 
                   if (refillAmount > 0) {
-                     // Add New Refill Log
                      finalStock += refillAmount;
                      med.history.add(RefillLog(getManilaTime(), refillAmount, currentSource, cost: finalCost, dispenser: disp));
                   } else {
-                     // --- GUARANTEED UPDATE: SEARCH BY STRING DATE ---
                      if (disp != null) {
                         try {
-                           // 1. Convert selected date to "YYYY-MM-DD"
                            String targetDateStr = DateFormat('yyyy-MM-dd').format(selectedRefillDate);
-                           
-                           // 2. Iterate and update ANY log matching that day
                            for (var log in med.history) {
                               if (DateFormat('yyyy-MM-dd').format(log.date) == targetDateStr) {
                                  log.dispenser = disp;
                               }
                            }
-                        } catch (e) {
-                           // Ignore
-                        }
+                        } catch (e) {}
                      }
                   }
 
@@ -1231,7 +1271,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   await FirebaseFirestore.instance.collection('meds').doc(med.id).update(med.toMap());
                   Navigator.pop(ctx);
                 },
-              )
+              ),
+              
+              // --- NEW: ARCHIVE BUTTON AT THE BOTTOM ---
+              if (!AppConfig.isPrivacyMode) ...[
+                SizedBox(height: 10),
+                TextButton.icon(
+                  icon: Icon(Icons.archive, color: Colors.grey),
+                  label: Text("Archive Medicine", style: TextStyle(color: Colors.grey)),
+                  onPressed: () async {
+                    await FirebaseFirestore.instance.collection('meds').doc(med.id).update({'isArchived': 1});
+                    Navigator.pop(ctx);
+                  },
+                )
+              ]
             ])),
           );
         });
@@ -1245,7 +1298,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     TextEditingController qtyCtrl = TextEditingController(text: "30");
     List<Map<String, dynamic>> tempIngredients = [{"nameCtrl": TextEditingController(), "mgCtrl": TextEditingController(text: "0")}];
     String selectedSource = "DOH";
-    int selectedCycle = 30; // Default
+    int selectedCycle = 30; 
     bool isSaving = false; 
 
     showDialog(
@@ -1305,7 +1358,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           currentStock: int.tryParse(qtyCtrl.text) ?? 30, 
                           cycleDuration: selectedCycle, 
                           lastRefillDate: getManilaTime(),
-                          lastDeductionDate: getManilaTime()
+                          lastDeductionDate: getManilaTime(),
+                          isArchived: false // Default to active
                         );
                         await FirebaseFirestore.instance.collection('meds').add(newMed.toMap());
                         Navigator.pop(ctx);

@@ -18,6 +18,6 @@ overwrite? NO
 firebase deploy
 
 flutter build web --release
-flutter deploy
+firebase deploy
 
 
